@@ -1,5 +1,7 @@
 # 🏦 Xóm Bank — Real-time Fraud Detection & Credit Analytics Pipeline
 
+[![CI — Automated Tests](https://github.com/<your-username>/xombank-fraud-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/xombank-fraud-pipeline/actions/workflows/ci.yml)
+
 > Hệ thống phát hiện gian lận giao dịch thẻ tín dụng kết hợp streaming (Kafka) và batch analytics (BigQuery + dbt), với 2 luồng xử lý độc lập: giám sát rủi ro tổng thể (Power BI) và tra cứu tức thời từng giao dịch (Streamlit).
 
 **Trạng thái:** ✅ Đã hoàn thành 100% (Production-Ready) — 22/22 Automated Tests PASS
@@ -409,23 +411,144 @@ xombank-fraud-pipeline/
 
 ## 10. Hướng dẫn cài đặt & chạy
 
-> Sẽ hoàn thiện chi tiết sau khi `docker-compose.yml` được viết. Sơ bộ các bước dự kiến:
+### 10.1 Yêu cầu hệ thống
 
-1. **Clone & cấu hình:**
-   ```bash
-   git clone <repo-url> && cd xombank-fraud-pipeline
-   cp .env.example .env   # điền GCP credentials cho BigQuery
-   ```
-2. **Khởi động toàn bộ hạ tầng local:**
-   ```bash
-   docker compose up -d
-   ```
-3. **Kiểm tra Kafka UI:** `http://localhost:8080`
-4. **Kiểm tra MinIO Console:** `http://localhost:9001`
-5. **Kiểm tra Airflow UI:** `http://localhost:8081` → bật các DAG
-6. **Chạy EDA + train model:** `python ml/train.py`
-7. **Xem Streamlit dashboard:** `http://localhost:8501`
-8. **Mở Power BI:** kết nối tới BigQuery dataset `xombank_dw`
+| Công cụ | Phiên bản tối thiểu | Ghi chú |
+|---|---|---|
+| **Docker Desktop** | 24.x+ | Bật WSL2 backend trên Windows |
+| **Python** | 3.10+ | Khuyến nghị 3.11 |
+| **Git** | 2.x+ | |
+| **Power BI Desktop** | Mới nhất | Chỉ cần nếu xem dashboard batch (Mục 8) |
+
+### 10.2 Clone & cấu hình
+
+```bash
+# 1. Clone repo
+git clone https://github.com/<your-username>/xombank-fraud-pipeline.git
+cd xombank-fraud-pipeline
+
+# 2. Tạo file biến môi trường từ template
+cp .env.example .env
+```
+
+Mở file `.env` và cập nhật các giá trị sau nếu cần:
+
+```dotenv
+# Kafka — giữ nguyên nếu chạy local Docker
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+
+# MinIO — đổi password nếu muốn
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin
+
+# BigQuery — điền thông tin GCP project thật
+GCP_PROJECT_ID=<your-gcp-project-id>
+GOOGLE_APPLICATION_CREDENTIALS=./gcp_key.json
+```
+
+> ⚠️ **Lưu ý bảo mật:** File `gcp_key.json` (Service Account key) đã được chặn bởi `.gitignore` — không bao giờ commit file này lên Git. Tạo key tại [GCP Console → IAM → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) với quyền **BigQuery Data Editor** + **BigQuery Job User**.
+
+### 10.3 Khởi động hạ tầng Docker
+
+```bash
+# Khởi động Kafka (KRaft mode), Kafka UI, và MinIO
+docker compose up -d
+
+# Kiểm tra trạng thái — đợi đến khi tất cả container "healthy"
+docker compose ps
+```
+
+Sau khi khởi động, kiểm tra các service:
+
+| Service | URL | Mô tả |
+|---|---|---|
+| Kafka UI | http://localhost:8080 | Quản lý topics, consumer groups, xem messages |
+| MinIO Console | http://localhost:9001 | Quản lý buckets, xem file Parquet (login: `minioadmin`/`minioadmin`) |
+
+### 10.4 Cài đặt Python dependencies
+
+```bash
+# Tạo virtual environment
+python -m venv .venv
+
+# Kích hoạt (Windows PowerShell)
+.venv\Scripts\Activate.ps1
+
+# Kích hoạt (macOS/Linux)
+# source .venv/bin/activate
+
+# Cài đặt toàn bộ dependencies
+pip install -r requirements.txt
+```
+
+### 10.5 Tải dataset
+
+```bash
+# Dùng kagglehub (đã có trong requirements.txt)
+python -c "import kagglehub; kagglehub.dataset_download('kartik2112/fraud-detection')"
+```
+
+Sau khi tải, copy 2 file `fraudTrain.csv` và `fraudTest.csv` vào thư mục `data/`.
+
+### 10.6 Chạy pipeline ML
+
+```bash
+# EDA + Train model + Tối ưu threshold bằng Cost Function
+python ml/train.py
+```
+
+Kết quả sẽ lưu vào:
+- `ml/models/fraud_model.joblib` — model đã train
+- `ml/models/model_metadata.json` — thông số PR-AUC, threshold, cost savings
+
+### 10.7 Chạy hệ thống streaming
+
+```bash
+# Terminal 1: Chạy Producer (giả lập stream giao dịch vào Kafka)
+python producer/produce_transactions.py
+
+# Terminal 2: Chạy Consumer Batch (Kafka → MinIO Parquet)
+python consumers/consumer_batch_analytics.py
+
+# Terminal 3: Chạy Consumer Real-time (Kafka → Model → DuckDB)
+python consumers/consumer_realtime_inference.py
+
+# Terminal 4: Chạy Streamlit dashboard
+streamlit run streamlit_app/app.py
+```
+
+### 10.8 Kiểm tra kết quả
+
+| Endpoint | Mô tả |
+|---|---|
+| http://localhost:8501 | **Streamlit** — Dashboard tra cứu giao dịch real-time |
+| http://localhost:8080 | **Kafka UI** — Kiểm tra consumer lag, messages |
+| http://localhost:9001 | **MinIO** — Kiểm tra file Parquet đã ghi |
+
+### 10.9 Chạy automated tests
+
+```bash
+# Chạy toàn bộ test suite (22 tests)
+pytest tests/ -v
+
+# Kết quả mong đợi: 22 passed ✅
+```
+
+### 10.10 Nhánh Batch Analytics (BigQuery + dbt + Power BI)
+
+```bash
+# 1. Nạp dữ liệu từ MinIO vào BigQuery (cần Airflow hoặc chạy thủ công)
+python scripts/export_full_powerbi_dataset.py
+
+# 2. Chạy dbt transformation
+cd dbt_project
+dbt run    # Build staging → intermediate → marts
+dbt test   # Chạy 20 schema tests
+cd ..
+
+# 3. Mở Power BI Desktop → Get Data → Google BigQuery
+#    Dataset: xombank_dw → Chọn các bảng marts (dim_*, fct_*)
+```
 
 ---
 
@@ -491,4 +614,4 @@ xombank-fraud-pipeline/
 ---
 
 **Tác giả:** Vinh  
-**Ngày cập nhật hoàn thiện:** 08/09/2026
+**Ngày cập nhật hoàn thiện:** 11/09/2026
