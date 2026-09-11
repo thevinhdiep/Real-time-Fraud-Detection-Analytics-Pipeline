@@ -1,0 +1,13 @@
+xombank_profile:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: xombank-fraud-analytics
+      dataset: xombank_dw
+      threads: 4
+      keyfile: gcp_key.json
+      location: US
+      priority: interactive
+      timeout_seconds: 300

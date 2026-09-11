@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: "Cleaned and cast transactions from raw_transactions table"
+    columns:
+      - name: trans_num
+        description: "Unique transaction identifier"
+        tests:
+          - unique
+          - not_null
+      - name: cc_num
+        description: "Credit card number"
+        tests:
+          - not_null
+      - name: amount
+        description: "Transaction amount in USD"
+        tests:
+          - not_null
+      - name: is_fraud
+        description: "Binary fraud label (0: legit, 1: fraud)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+              quote: false
+
+  - name: dim_customers
+    description: "Customer dimension table with demographic attributes"
+    columns:
+      - name: customer_id
+        description: "Surrogate key for customer"
+        tests:
+          - unique
+          - not_null
+      - name: cc_num
+        description: "Credit card number"
+        tests:
+          - not_null
+
+  - name: dim_merchants
+    description: "Merchant dimension table with historical aggregations"
+    columns:
+      - name: merchant_id
+        description: "Surrogate key for merchant and category"
+        tests:
+          - unique
+          - not_null
+      - name: merchant_name
+        tests:
+          - not_null
+
+  - name: fct_transactions_fraud_features
+    description: "Fact table containing transactions and spatial/temporal fraud features"
+    columns:
+      - name: trans_num
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+      - name: merchant_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_merchants')
+              field: merchant_id
+      - name: is_fraud
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+              quote: false

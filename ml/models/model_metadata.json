@@ -1,0 +1,88 @@
+{
+  "model_name": "LightGBM",
+  "trained_at": "2026-08-21T14:22:24.992720+00:00",
+  "optimal_threshold": 0.75,
+  "cost_parameters": {
+    "cost_false_negative": 500.0,
+    "cost_false_positive": 15.0
+  },
+  "cv_results": {
+    "Logistic Regression": {
+      "mean_pr_auc": 0.36210634093145433,
+      "std_pr_auc": 0.031336751325501615,
+      "mean_roc_auc": 0.9608869904563996,
+      "mean_cost_per_fold": 44302.0,
+      "avg_optimal_threshold": 0.72,
+      "training_time_sec": 5.141037464141846
+    },
+    "Random Forest": {
+      "mean_pr_auc": 0.8945910569402548,
+      "std_pr_auc": 0.011381935464472625,
+      "mean_roc_auc": 0.9961003048413716,
+      "mean_cost_per_fold": 12304.0,
+      "avg_optimal_threshold": 0.338,
+      "training_time_sec": 11.56026005744934
+    },
+    "LightGBM": {
+      "mean_pr_auc": 0.9176913261681221,
+      "std_pr_auc": 0.011522205722696402,
+      "mean_roc_auc": 0.996617929075685,
+      "mean_cost_per_fold": 11929.0,
+      "avg_optimal_threshold": 0.534,
+      "training_time_sec": 6.006974220275879
+    }
+  },
+  "holdout_test_metrics": {
+    "pr_auc": 0.7572,
+    "roc_auc": 0.9915,
+    "optimal_threshold": 0.75,
+    "recall_opt": 0.8545,
+    "precision_opt": 0.328,
+    "f1_opt": 0.4741,
+    "cost_default": 216920.0,
+    "cost_opt": 212325.0,
+    "cost_savings": 4595.0,
+    "cost_savings_pct": 2.12
+  },
+  "feature_names": [
+    "amt",
+    "amt_log",
+    "geo_distance_km",
+    "txn_freq_24h",
+    "amt_zscore_by_customer",
+    "trans_hour",
+    "day_of_week",
+    "is_weekend",
+    "is_night",
+    "customer_age",
+    "city_pop_log",
+    "gender_code",
+    "cat_entertainment",
+    "cat_food_dining",
+    "cat_gas_transport",
+    "cat_grocery_net",
+    "cat_grocery_pos",
+    "cat_health_fitness",
+    "cat_home",
+    "cat_kids_pets",
+    "cat_misc_net",
+    "cat_misc_pos",
+    "cat_personal_care",
+    "cat_shopping_net",
+    "cat_shopping_pos",
+    "cat_travel",
+    "cat_other"
+  ],
+  "top_features": [
+    "amt",
+    "customer_age",
+    "amt_zscore_by_customer",
+    "trans_hour",
+    "city_pop_log",
+    "txn_freq_24h",
+    "day_of_week",
+    "geo_distance_km",
+    "cat_grocery_pos",
+    "cat_food_dining"
+  ]
+}

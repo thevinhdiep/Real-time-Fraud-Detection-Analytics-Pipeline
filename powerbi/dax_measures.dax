@@ -1,0 +1,152 @@
+// =====================================================================
+// XÓM BANK — POWER BI DAX MEASURES SPECIFICATION (PHASE 8)
+// Star Schema Data Model:
+// - Fact:  fct_transactions_fraud_features
+// - Dims:  dim_customers, dim_merchants
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// 1. BASE VOLUME MEASURES
+// ---------------------------------------------------------------------
+
+// Tổng số lượng giao dịch đã ghi nhận
+Total Transactions = 
+COUNTROWS(fct_transactions_fraud_features)
+
+// Tổng giá trị giao dịch ($ USD)
+Total Transaction Amount = 
+SUM(fct_transactions_fraud_features[amount])
+
+// Giá trị giao dịch trung bình ($ USD)
+Avg Transaction Amount = 
+AVERAGE(fct_transactions_fraud_features[amount])
+
+// Khoảng cách địa lý trung bình (km)
+Avg Distance KM = 
+AVERAGE(fct_transactions_fraud_features[geo_distance_km])
+
+// Số lượng khách hàng duy nhất có phát sinh giao dịch
+Unique Active Customers = 
+DISTINCTCOUNT(fct_transactions_fraud_features[customer_id])
+
+// Số lượng merchant duy nhất có phát sinh giao dịch
+Unique Active Merchants = 
+DISTINCTCOUNT(fct_transactions_fraud_features[merchant_id])
+
+
+// ---------------------------------------------------------------------
+// 2. FRAUD INCIDENT & DETECTION MEASURES
+// ---------------------------------------------------------------------
+
+// Số lượng giao dịch gian lận (Fraud Count)
+Total Fraud Transactions = 
+CALCULATE(
+    COUNTROWS(fct_transactions_fraud_features),
+    fct_transactions_fraud_features[is_fraud] = 1
+)
+
+// Số lượng giao dịch hợp lệ (Legitimate Count)
+Total Legit Transactions = 
+CALCULATE(
+    COUNTROWS(fct_transactions_fraud_features),
+    fct_transactions_fraud_features[is_fraud] = 0
+)
+
+// Tỷ lệ gian lận theo số lượng (Fraud Transaction Rate %)
+Fraud Rate % = 
+DIVIDE(
+    [Total Fraud Transactions],
+    [Total Transactions],
+    0
+)
+
+
+// ---------------------------------------------------------------------
+// 3. FINANCIAL LOSS & RISK IMPACT MEASURES
+// ---------------------------------------------------------------------
+
+// Tổng số tiền bị gian lận (Total Fraud Loss in USD)
+Total Fraud Amount = 
+CALCULATE(
+    SUM(fct_transactions_fraud_features[amount]),
+    fct_transactions_fraud_features[is_fraud] = 1
+)
+
+// Giá trị trung bình mỗi vụ gian lận (Avg Fraud Amount in USD)
+Avg Fraud Amount = 
+CALCULATE(
+    AVERAGE(fct_transactions_fraud_features[amount]),
+    fct_transactions_fraud_features[is_fraud] = 1
+)
+
+// Tỷ lệ thiệt hại tài chính trên tổng doanh số (Fraud Loss Rate %)
+Fraud Loss Rate % = 
+DIVIDE(
+    [Total Fraud Amount],
+    [Total Transaction Amount],
+    0
+)
+
+// Tỷ lệ chênh lệch giá trị gian lận so với giao dịch thông thường
+Fraud to Normal Amount Ratio = 
+DIVIDE(
+    [Avg Fraud Amount],
+    CALCULATE(AVERAGE(fct_transactions_fraud_features[amount]), fct_transactions_fraud_features[is_fraud] = 0),
+    1
+)
+
+
+// ---------------------------------------------------------------------
+// 4. BEHAVIORAL & GEOSPATIAL MEASURES
+// ---------------------------------------------------------------------
+
+// Khoảng cách địa lý trung bình của các vụ gian lận (km)
+Avg Fraud Distance KM = 
+CALCULATE(
+    AVERAGE(fct_transactions_fraud_features[geo_distance_km]),
+    fct_transactions_fraud_features[is_fraud] = 1
+)
+
+// Khoảng cách địa lý trung bình của giao dịch hợp lệ (km)
+Avg Legit Distance KM = 
+CALCULATE(
+    AVERAGE(fct_transactions_fraud_features[geo_distance_km]),
+    fct_transactions_fraud_features[is_fraud] = 0
+)
+
+// Tỷ lệ gian lận phát sinh vào ban đêm (0h - 5h sáng)
+Night Fraud Rate % = 
+DIVIDE(
+    CALCULATE(COUNTROWS(fct_transactions_fraud_features), fct_transactions_fraud_features[is_fraud] = 1, fct_transactions_fraud_features[is_night] = 1),
+    CALCULATE(COUNTROWS(fct_transactions_fraud_features), fct_transactions_fraud_features[is_night] = 1),
+    0
+)
+
+// Tỷ lệ gian lận phát sinh vào ngày cuối tuần (Thứ 7 & Chủ Nhật)
+Weekend Fraud Rate % = 
+DIVIDE(
+    CALCULATE(COUNTROWS(fct_transactions_fraud_features), fct_transactions_fraud_features[is_fraud] = 1, fct_transactions_fraud_features[is_weekend] = 1),
+    CALCULATE(COUNTROWS(fct_transactions_fraud_features), fct_transactions_fraud_features[is_weekend] = 1),
+    0
+)
+
+// Tần suất giao dịch 24h trung bình của các vụ gian lận
+Avg Fraud Txn Frequency 24h = 
+CALCULATE(
+    AVERAGE(fct_transactions_fraud_features[txn_freq_24h]),
+    fct_transactions_fraud_features[is_fraud] = 1
+)
+
+
+// ---------------------------------------------------------------------
+// 5. ESTIMATED OPERATIONAL COST SAVINGS
+// ---------------------------------------------------------------------
+
+// Ước tính chi phí vận hành nếu không có hệ thống phát hiện gian lận ($500/FN + $15/FP)
+Estimated Baseline Risk Cost = 
+[Total Fraud Transactions] * 500
+
+// Ước tính số tiền thiệt hại được ngăn chặn (với tỷ lệ Recall 85.45% của LightGBM)
+Estimated Fraud Prevented Amount = 
+[Total Fraud Amount] * 0.8545

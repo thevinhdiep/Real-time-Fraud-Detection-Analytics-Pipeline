@@ -1,0 +1,58 @@
+# AI Agents & Workflows (User private workspace)
+.agents/
+
+# Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment Variables & Secrets (CRITICAL SECURITY)
+.env
+.env.*
+!.env.example
+gcp_key.json
+*.pem
+*.key
+*.cer
+*.pfx
+
+# Data & Local Storage (Large files - Exclude data but keep directories)
+data/*
+!data/.gitkeep
+data_lake_storage/*
+!data_lake_storage/.gitkeep
+*.duckdb
+*.duckdb.wal
+*.sqlite
+
+# ML Model Artifacts (Binary - large)
+ml/models/*.joblib
+ml/models/*.pkl
+
+# Power BI exported data (Large files)
+powerbi/data/*
+!powerbi/data/.gitkeep
+
+# dbt build artifacts & user telemetry
+dbt_project/target/
+dbt_project/logs/
+dbt_project/dbt_packages/
+dbt_project/.user.yml
+
+# Temporary & Log Files
+.temp*/
+*.log
+*.bak
+*.swp
+
+# OS System Files
+.DS_Store
+Thumbs.db
+desktop.ini
